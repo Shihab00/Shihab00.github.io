@@ -1,6 +1,13 @@
-<html>
-<script src='https://d3js.org/d3.v5.min.js'></script>
-<style> circle {fill: lightblue; stroke: black;} </style>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Shihab Siddique - CS416 Narrative Visualization</title>
+  <script src='https://d3js.org/d3.v5.min.js'></script>
+  <style> circle {fill: lightblue; stroke: black;} </style>
+</head>
+
+
 <body onload='init()'>
 <svg width=300 height=300>
 </svg>
@@ -8,8 +15,8 @@
 async function init() {
   const data = await d3.csv('https://flunky.github.io/cars2017.csv');
   const margin = 50
-  const height = 200
-  const width = 200
+  const height = 620
+  const width = 1180
   var x = d3.scaleLog().domain([10,150]).range([0,width]);
   var y = d3.scaleLog().domain([10,150]).range([height,0]);
   
