@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Shihab Siddique - CS416 Narrative Visualization</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        circle {
+            fill: lightblue;
+            stroke: black;
+        }
+        .tooltip {
+            position: absolute;
+            text-align: center;
+            width: auto;
+            height: auto;
+            padding: 10px;
+            background: black;
+            color: white;
+            border-radius: 5px;
+            pointer-events: none;
+        }
+        .button-container {
+            width: 100%;
+            text-align: center;
+        }
+        .button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4e79a7;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+        .dropdown-container {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+        .dropdown {
+            padding: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body onload="init()">
+    <div>
+        <h2>Engine Cylinders in Gasoline Cars - 2017</h2>
+            <ul>
+                <li> The majority of gasoline cars have 4 cylinder engines, providing the best balance between MPG and horsepower</li>
+                <li> As manufacturers increase the number of cylinders the Overall MPG declines</li>
+                <li> Fewer cars are made with a large amount of cylinders (10-12), a trend that has continued over time</li>
+            </ul>
+            <p>*Hover over the points to see each car's Number of cylinders, City MPG ,and Highway MPG*</p>
+    </div>
+    <div>
+    <div class="dropdown-container">
+        <label for="cylinder-dropdown">Filter by Cylinders:</label>
+        <select id="cylinder-dropdown" class="dropdown">
+            <option value="All">All</option>
+        </select>
+    </div>
+    <div>
+        <svg width="1280" height="720"></svg>
+        <script>
+            let gasolineData = [];
+
+            async function init() {
+                const margin = 50;
+                const height = 720 - margin * 2;
+                const width = 1280 - margin * 2;
+                const data = await d3.csv('https://Shihab00.github.io/cars2017.csv');
+
+                // Filter the data for gasoline cars
+                gasolineData = data.filter(d => d.Fuel === 'Gasoline');
+
+                // Populate the dropdown with unique cylinder counts
+                const cylinderDropdown = d3.select("#cylinder-dropdown");
+                const uniqueCylinders = [...new Set(gasolineData.map(d => d.EngineCylinders))].sort((a, b) => a - b);
+                cylinderDropdown.selectAll("option.cylinder-option")
+                    .data(uniqueCylinders)
+                    .enter()
+                    .append("option")
+                    .attr("class", "cylinder-option")
+                    .attr("value", d => d)
+                    .text(d => d);
+
+                // Add an event listener for the dropdown
+                cylinderDropdown.on("change", updateChart);
+
+                // Initial chart render
+                renderChart(gasolineData);
+            }
+
+            function renderChart(data) {
+                const margin = 50;
+                const height = 720 - margin * 2;
+                const width = 1280 - margin * 2;
+
+                // Remove any existing SVG elements
+                d3.select("svg").selectAll("*").remove();
+
+                const x = d3.scaleLog()
+                    .domain([d3.min(data, d => +d.AverageCityMPG), d3.max(data, d => +d.AverageCityMPG)])
+                    .range([0, width]);
+
+                const y = d3.scaleLog()
+                    .domain([d3.min(data, d => +d.AverageHighwayMPG), d3.max(data, d => +d.AverageHighwayMPG)])
+                    .range([height, 0]);
+
+                const color = d3.scaleOrdinal()
+                    .domain(['Gasoline'])
+                    .range(["#4e79a7"]);
+
+                const tooltip = d3.select("body")
+                    .append("div")
+                    .attr("class", "tooltip")
+                    .style("opacity", 0);
+
+                const svg = d3.select('svg')
+                    .attr('width', width + margin * 2)
+                    .attr('height', height + margin * 2);
+
+                svg.append('g')
+                    .attr('transform', 'translate(50, 50)')
+                    .selectAll('circle')
+                    .data(data)
+                    .enter().append('circle')
+                    .attr('cx', d => x(+d.AverageCityMPG))
+                    .attr('cy', d => y(+d.AverageHighwayMPG))
+                    .attr('r', d => 2 + +d.EngineCylinders)
+                    .style('fill', d => color(d.Fuel))
+                    .on("mouseover", function(event, d) {
+                        tooltip.transition()
+                            .duration(200)
+                            .style("opacity", .9);
+                        tooltip.html("<div>" + d.Make + "</div><div>Fuel: " + d.Fuel + "</div><div>" + d.EngineCylinders + " Cylinders</div><div>City MPG: " + d.AverageCityMPG + "</div><div>Highway MPG: " + d.AverageHighwayMPG + "</div>")
+                            .style("left", (event.pageX + 5) + "px")
+                            .style("top", (event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function() {
+                        tooltip.transition()
+                            .duration(500)
+                            .style("opacity", 0);
+                    });
+
+                svg.append('g')
+                    .attr("transform", `translate(${margin}, ${margin})`)
+                    .call(d3.axisLeft(y)
+                        .tickValues([10, 20, 50, 100, 150])
+                        .tickFormat(d3.format("~s")));
+
+                svg.append('g')
+                    .attr("transform", `translate(${margin}, ${height + margin})`)
+                    .call(d3.axisBottom(x)
+                        .tickValues([10, 20, 50, 100, 150])
+                        .tickFormat(d3.format("~s")));
+
+                const legend = svg.append('g')
+                    .attr('transform', `translate(${width + margin - 120}, ${height + margin - 120})`);
+
+                const legendData = ['Gasoline'];
+                legend.selectAll('rect')
+                    .data(legendData)
+                    .enter().append('rect')
+                    .attr('x', 0)
+                    .attr('y', (d, i) => i * 25)
+                    .attr('width', 20)
+                    .attr('height', 20)
+                    .style('fill', d => color(d));
+
+                legend.selectAll('text')
+                    .data(legendData)
+                    .enter().append('text')
+                    .attr('x', 30)
+                    .attr('y', (d, i) => i * 25 + 15)
+                    .text(d => d)
+                    .style('font-size', '14px')
+                    .attr('alignment-baseline', 'middle');
+
+                const top3GasolineCars = data.sort((a, b) => +b.AverageOverallMPG - +a.AverageOverallMPG).slice(0, 3);
+
+                svg.append('g')
+                    .attr('transform', 'translate(50, 50)')
+                    .selectAll('text.annotation')
+                    .data(top3GasolineCars)
+                    .enter().append('text')
+                    .attr('class', 'annotation')
+                    .attr('x', (d,i) => Math.max(15, Math.min(width - 15, x(+d.AverageCityMPG))))
+                    .attr('y', (d, i) => y(+d.AverageHighwayMPG) - 25 - i * 10)
+                    .attr('text-anchor', 'middle')
+                    .style('fill', 'black')
+                    .style('font-size', '12px')
+                    .text(d => `${d.Make} - ${d.AverageOverallMPG} MPG`);
+            }
+
+            function updateChart() {
+                const selectedCylinders = d3.select("#cylinder-dropdown").property("value");
+                const filteredData = selectedCylinders === "All" ? gasolineData : gasolineData.filter(d => d.EngineCylinders === selectedCylinders);
+                renderChart(filteredData);
+            }
+
+            function goToPreviousSlide() { window.location.href = "index.html"; }
+            function goToNextSlide() { window.location.href = "scene3.html"; }
+        </script>
+    </div>
+    <div class="button-container">
+        <button class="button" onclick="goToPreviousSlide()">Previous</button> <button class="button" onclick="goToNextSlide()">Next</button>
+    </div>
+</body>
+</html>

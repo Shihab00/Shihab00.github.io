@@ -1,47 +1,162 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Shihab Siddique - CS416 Narrative Visualization</title>
-  <script src='https://d3js.org/d3.v5.min.js'></script>
-  <style> circle {fill: lightblue; stroke: black;} </style>
+    <meta charset="UTF-8">
+    <title>Shihab Siddique - CS416 Narrative Visualization</title>
+    <script src='https://d3js.org/d3.v6.min.js'></script>
+    <style> circle {fill: lightblue; stroke: black;} </style>
+    <style>
+        .tooltip {
+            position: absolute;
+            text-align: center;
+            width: auto;
+            height: auto;
+            padding: 10px;
+            background: black;
+            color: white;
+            border-radius: 5px;
+            pointer-events: none;
+        }
+        .button-container {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+        }
+        .button {
+            position: absolute;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4e79a7;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
 </head>
-
-
 <body onload='init()'>
-<svg width=1280 height=720>
-</svg>
+<div>
+    <h2>Cars Manufactured in 2017</h2>
+        <ul>
+            <li> Nearly 150 different cars were manufactured in 2017</li>
+            <li> The majority of them were powered by gasoline, with the electric car market continuing to grow with the release of the Tesla Model 3</li>
+            <li> Electricity have become the ideal fuel for cars in terms of the highest miles per gallon equivalent</li>
+            <li> Meanwhile, Diesel performs similar to Gasoline when it comes to Overall MPG (Average of Highway and City MPG)</li>
+        </ul>
+        <p>*Hover over the points to see each car's Number of cylinders, City MPG ,and Highway MPG*</p>
+</div>
+<div>
+<svg width="1280" height="720"></svg>
 <script>
 async function init() {
-  const margin = 50
-  const height = 720 - margin - margin
-  const width = 1280 - margin - margin
-  const data = await d3.csv('https://flunky.github.io/cars2017.csv');
-  var x = d3.scaleLog().domain([10, 1280 - margin]).range([0,width]);
-  var y = d3.scaleLog().domain([10, 720 - margin]).range([height,0]);
-  
-  d3.select('svg')
-    .append('g').attr('transform','translate(50,50)')
-    .selectAll('circle')
-    .data(data)
-    .enter().append('circle')
-    .attr('cx', d=> x(d.AverageCityMPG))
-    .attr('cy', d=> y(d.AverageHighwayMPG))
-    .attr('r', d=> 2 + +d.EngineCylinders);
+    const margin = 50;
+    const height = 720 - margin * 2;
+    const width = 1280 - margin * 2;
+    //const data = await d3.csv('https://flunky.github.io/cars2017.csv');
+    const data = await d3.csv('https://Shihab00.github.io/cars2017.csv');
 
-  d3.select('svg').append('g')
-     .attr("transform", "translate("+margin+","+margin+")")
-     .call(d3.axisLeft(y)
-     .tickValues([10,20,50,100])
-     .tickFormat(d3.format("~s")));
+    const x = d3.scaleLog()
+        .domain([d3.min(data, d => +d.AverageCityMPG), d3.max(data, d => +d.AverageCityMPG)])
+        .range([0, width]);
 
-  d3.select('svg').append('g')
-     .attr("transform", "translate("+margin+","+(height+margin)+")")
-     .call(d3.axisBottom(x)
-     .tickValues([10,20,50,100])
-     .tickFormat(d3.format("~s")));
+    const y = d3.scaleLog()
+        .domain([d3.min(data, d => +d.AverageHighwayMPG), d3.max(data, d => +d.AverageHighwayMPG)])
+        .range([height, 0]);
 
+    const color = d3.scaleOrdinal()
+        .domain(['Gasoline', 'Electricity', 'Diesel'])
+        .range(["#4e79a7", "#f28e2c", "#edc949"]);
+
+    const tooltip = d3.select("body")
+        .append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+
+    const svg = d3.select('svg')
+        .attr('width', width + margin * 2)
+        .attr('height', height + margin * 2);
+
+    svg.append('g')
+        .attr('transform', 'translate(50, 50)')
+        .selectAll('circle')
+        .data(data)
+        .enter().append('circle')
+        .attr('cx', d => x(+d.AverageCityMPG))
+        .attr('cy', d => y(+d.AverageHighwayMPG))
+        .attr('r', d => 2 + +d.EngineCylinders)
+        .style('fill', d => color(d.Fuel))
+        .on("mouseover", function(event, d) {
+            tooltip.transition()
+                .duration(200)
+                .style("opacity", .9);
+            tooltip.html("<div>" + d.Make + "</div><div>Fuel: " + d.Fuel + "</div><div>" + d.EngineCylinders + " Cylinders</div><div>City MPG: " + d.AverageCityMPG + "</div><div>Highway MPG: " + d.AverageHighwayMPG + "</div>")
+            .style("left", (event.pageX + 5) + "px")
+            .style("top", (event.pageY - 28) + "px");
+        })
+        .on("mouseout", function() {
+            tooltip.transition()
+                .duration(500)
+                .style("opacity", 0);
+        });
+
+    svg.append('g')
+        .attr("transform", `translate(${margin}, ${margin})`)
+        .call(d3.axisLeft(y)
+            .tickValues([10, 20, 50, 100, 150])
+            .tickFormat(d3.format("~s")));
+
+    svg.append('g')
+        .attr("transform", `translate(${margin}, ${height + margin})`)
+        .call(d3.axisBottom(x)
+            .tickValues([10, 20, 50, 100, 150])
+            .tickFormat(d3.format("~s")));
+
+    const legend = svg.append('g')
+        .attr('transform', `translate(${width + margin - 120}, ${height + margin - 120})`);
+
+    const legendData = ['Gasoline', 'Electricity', 'Diesel'];
+    legend.selectAll('rect')
+        .data(legendData)
+        .enter().append('rect')
+        .attr('x', 0)
+        .attr('y', (d, i) => i * 25)
+        .attr('width', 20)
+        .attr('height', 20)
+        .style('fill', d => color(d));
+
+    legend.selectAll('text')
+        .data(legendData)
+        .enter().append('text')
+        .attr('x', 30)
+        .attr('y', (d, i) => i * 25 + 15)
+        .text(d => d)
+        .style('font-size', '14px')
+        .attr('alignment-baseline', 'middle');
+
+    const maxValues = {};
+    data.forEach(d => {
+        if (!maxValues[d.Fuel] || +d.AverageOverallMPG > +maxValues[d.Fuel].AverageOverallMPG) {
+            maxValues[d.Fuel] = d;
+        }
+    });
+
+    
+    svg.append('g')
+        .attr('transform', 'translate(50, 50)')
+        .selectAll('text.annotation')
+        .data(Object.values(maxValues))
+        .enter().append('text')
+        .attr('class', 'annotation')
+        .attr('x', d => x(+d.AverageCityMPG) - 20)
+        .attr('y', (d,i) => y(+d.AverageHighwayMPG) - 24  + i * 3)
+        .attr('text-anchor', 'middle')
+        .style('fill', 'black')
+        .style('font-size', '12px')
+        .text(d => `${d.Make} - ${d.Fuel} - ${d.AverageOverallMPG} Overall MPG`);
 }
+function goToNextSlide() { window.location.href = "scene2.html"; }
 </script>
+</div>
+<div class="button-container"><button class="button" onclick="goToNextSlide()">Next</button></div>
 </body>
 </html>
